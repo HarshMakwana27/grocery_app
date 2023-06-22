@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/data/categories.dart';
+import 'package:grocery_app/model/categories.dart';
+
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class NewItemScreen extends StatefulWidget {
   const NewItemScreen({super.key});
@@ -12,9 +16,34 @@ class NewItemScreen extends StatefulWidget {
 
 class _NewItemScreen extends State<NewItemScreen> {
   final _formKey = GlobalKey<FormState>();
+  var _enteredName = '';
+  var _selectedQuantity;
+  var _selectedCategory = categories[Categories.other]!;
 
-  void _saveItem() {
-    _formKey.currentState!.validate();
+  void _saveItem() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      final url = Uri.https(
+          'groceryapp-5128d-default-rtdb.firebaseio.com', 'shopping-list.json');
+      final response = await http.post(
+        url,
+        headers: {'Content-type': 'application/json'},
+        body: jsonEncode({
+          'name': _enteredName,
+          'quantity': _selectedQuantity,
+          'category': _selectedCategory.title,
+        }),
+      );
+
+      print(response.statusCode);
+      print(response.body);
+
+      if (!context.mounted) {
+        return;
+      }
+
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -28,11 +57,10 @@ class _NewItemScreen extends State<NewItemScreen> {
         child: Form(
           key: _formKey,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
                 style: Theme.of(context).textTheme.titleMedium,
-                initialValue: 'ojihj',
+                initialValue: '',
                 maxLength: 20,
                 decoration: const InputDecoration(
                   label: Text(
@@ -47,6 +75,9 @@ class _NewItemScreen extends State<NewItemScreen> {
                   }
                   return null;
                 },
+                onSaved: (value) {
+                  _enteredName = value!;
+                },
               ),
               const SizedBox(
                 height: 5,
@@ -56,6 +87,7 @@ class _NewItemScreen extends State<NewItemScreen> {
                 children: [
                   Expanded(
                     child: TextFormField(
+                      // keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         label: Text('Quantity'),
                       ),
@@ -69,16 +101,21 @@ class _NewItemScreen extends State<NewItemScreen> {
                         }
                         return null;
                       },
+                      onSaved: (value) {
+                        _selectedQuantity = int.parse(value!);
+                      },
                     ),
                   ),
                   const SizedBox(
                     width: 20,
                   ),
                   Expanded(
-                    child: DropdownButtonFormField(items: [
-                      for (final category in categories.entries)
-                        DropdownMenuItem(
-                            value: category,
+                    child: DropdownButtonFormField<Category>(
+                      value: _selectedCategory,
+                      items: [
+                        for (final category in categories.entries)
+                          DropdownMenuItem(
+                            value: category.value,
                             child: Row(
                               children: [
                                 Container(
@@ -91,8 +128,15 @@ class _NewItemScreen extends State<NewItemScreen> {
                                 ),
                                 Text(category.value.title),
                               ],
-                            ))
-                    ], onChanged: (value) {}),
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory = value!;
+                        });
+                      },
+                    ),
                   )
                 ],
               ),
@@ -103,7 +147,9 @@ class _NewItemScreen extends State<NewItemScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      _formKey.currentState!.reset();
+                    },
                     child: const Text('Reset'),
                   ),
                   ElevatedButton(
