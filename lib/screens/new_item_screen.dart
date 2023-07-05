@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/data/categories.dart';
 import 'package:grocery_app/model/categories.dart';
+import 'package:grocery_app/model/grocery_item.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -17,7 +18,7 @@ class NewItemScreen extends StatefulWidget {
 class _NewItemScreen extends State<NewItemScreen> {
   final _formKey = GlobalKey<FormState>();
   var _enteredName = '';
-  var _selectedQuantity;
+  dynamic _selectedQuantity;
   var _selectedCategory = categories[Categories.other]!;
 
   void _saveItem() async {
@@ -42,7 +43,13 @@ class _NewItemScreen extends State<NewItemScreen> {
         return;
       }
 
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(
+        GroceryItem(
+            category: _selectedCategory,
+            name: _enteredName,
+            quantity: _selectedQuantity,
+            id: response.body),
+      );
     }
   }
 
